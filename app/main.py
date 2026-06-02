@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from threading import Lock
 from typing import Annotated
@@ -37,7 +37,7 @@ RATE_LIMIT = 120
 RATE_WINDOW_SECONDS = 60
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
-_request_history: dict[str, list[float]] = defaultdict(list)
+_request_history: dict[str, deque[float]] = defaultdict(deque)
 _request_lock = Lock()
 
 
@@ -191,7 +191,9 @@ async def rate_limit_middleware(request: Request, call_next):
     now = time.time()
 
     with _request_lock:
-        recent_requests = [timestamp for timestamp in _request_history[key] if now - timestamp < RATE_WINDOW_SECONDS]
+        recent_requests = _request_history[key]
+        while recent_requests and now - recent_requests[0] >= RATE_WINDOW_SECONDS:
+            recent_requests.popleft()
         if len(recent_requests) >= RATE_LIMIT:
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -201,7 +203,6 @@ async def rate_limit_middleware(request: Request, call_next):
                 },
             )
         recent_requests.append(now)
-        _request_history[key] = recent_requests
 
     return await call_next(request)
 
