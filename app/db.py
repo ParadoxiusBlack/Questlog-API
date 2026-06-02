@@ -81,13 +81,24 @@ class InventoryEntry(Base):
 
 def hash_password(password: str, salt: str | None = None) -> str:
     salt_bytes = bytes.fromhex(salt) if salt else os.urandom(16)
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, 390000)
-    return f"{salt_bytes.hex()}${digest.hex()}"
+    iterations = 600_000
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, iterations)
+    return f"{iterations}${salt_bytes.hex()}${digest.hex()}"
 
 
 def verify_password(password: str, stored_password: str) -> bool:
-    salt, stored_digest = stored_password.split("$", maxsplit=1)
-    computed_digest = hash_password(password, salt).split("$", maxsplit=1)[1]
+    parts = stored_password.split("$")
+    if len(parts) == 3:
+        iterations_text, salt, stored_digest = parts
+        iterations = int(iterations_text)
+    elif len(parts) == 2:
+        salt, stored_digest = parts
+        iterations = 390_000
+    else:
+        return False
+
+    salt_bytes = bytes.fromhex(salt)
+    computed_digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, iterations).hex()
     return hmac.compare_digest(computed_digest, stored_digest)
 
 
