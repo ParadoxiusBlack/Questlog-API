@@ -441,9 +441,9 @@ def create_app(database_url: str = DATABASE_URL) -> FastAPI:
         requested_item_ids = {entry.item_id for entry in payload.entries}
         if payload.entries:
             existing_items = {item.id: item for item in db.query(Item).filter(Item.id.in_(requested_item_ids)).all()}
-            missing_item_ids = sorted(requested_item_ids - set(existing_items))
-            if missing_item_ids:
-                raise APIError(status.HTTP_404_NOT_FOUND, "NotFound", f"Item {missing_item_ids[0]} not found")
+            sorted_missing_item_ids = sorted(requested_item_ids - set(existing_items))
+            if sorted_missing_item_ids:
+                raise APIError(status.HTTP_404_NOT_FOUND, "NotFound", f"Item {sorted_missing_item_ids[0]} not found")
 
         for entry in list(player.inventory_entries):
             db.delete(entry)
