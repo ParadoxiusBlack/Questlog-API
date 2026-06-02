@@ -7,6 +7,8 @@ import os
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
+PBKDF2_ITERATIONS = 600_000
+
 
 class Base(DeclarativeBase):
     pass
@@ -81,9 +83,8 @@ class InventoryEntry(Base):
 
 def hash_password(password: str, salt: str | None = None) -> str:
     salt_bytes = bytes.fromhex(salt) if salt else os.urandom(16)
-    iterations = 600_000
-    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, iterations)
-    return f"{iterations}${salt_bytes.hex()}${digest.hex()}"
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt_bytes, PBKDF2_ITERATIONS)
+    return f"{PBKDF2_ITERATIONS}${salt_bytes.hex()}${digest.hex()}"
 
 
 def verify_password(password: str, stored_password: str) -> bool:

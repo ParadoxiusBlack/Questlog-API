@@ -38,6 +38,10 @@ def test_openapi_and_health_endpoints_exist(tmp_path: Path):
 def test_quest_crud_and_filtering_require_auth(tmp_path: Path):
     client = make_client(tmp_path)
 
+    public_listing = client.get("/quests")
+    assert public_listing.status_code == 200
+    assert public_listing.json() == []
+
     unauthorized = client.post("/quests", json={"title": "Save Oakvale", "description": "Defeat bandits", "status": "open"})
     assert unauthorized.status_code == 401
 
